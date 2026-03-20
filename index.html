@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Village Adventure 3D – Explore a living 3D village with NPCs, interactive houses, and smooth FPS gameplay on all devices." />
+  <title>Village Adventure 3D</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loading-content">
+      <h1 class="title">🏡 Village Adventure</h1>
+      <p class="subtitle">3D Village Exploration</p>
+      <div class="loading-bar-container">
+        <div class="loading-bar" id="loading-bar"></div>
+      </div>
+      <p id="loading-text">Loading world...</p>
+    </div>
+  </div>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="hidden">
+    <div class="start-content">
+      <h1>🏡 Village Adventure</h1>
+      <p>Explore the village, meet NPCs, and enter every house!</p>
+      <div class="controls-info">
+        <div class="ctrl-group">
+          <h3>🖥️ PC Controls</h3>
+          <p>WASD – Move</p>
+          <p>Mouse – Look</p>
+          <p>Click – Lock Mouse</p>
+          <p>E – Interact</p>
+        </div>
+        <div class="ctrl-group">
+          <h3>📱 Mobile Controls</h3>
+          <p>Left Joystick – Move</p>
+          <p>Right Swipe – Look</p>
+          <p>Tap Prompt – Interact</p>
+        </div>
+      </div>
+      <button id="play-btn">▶ Start Adventure</button>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="crosshair">+</div>
+    <div id="interaction-prompt" class="hidden">
+      <span id="prompt-text">E - Open Door</span>
+    </div>
+    <div id="location-label"></div>
+  </div>
+
+  <!-- Dialog Box -->
+  <div id="dialog-box" class="hidden">
+    <div class="dialog-inner">
+      <div class="npc-avatar" id="dialog-avatar">👤</div>
+      <div class="dialog-body">
+        <div class="npc-name" id="dialog-name">Villager</div>
+        <div class="dialog-text" id="dialog-text"></div>
+        <button id="dialog-close">Continue ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Controls -->
+  <div id="mobile-left" class="mobile-control-zone"></div>
+  <div id="mobile-right" class="mobile-control-zone"></div>
+  <button id="mobile-interact" class="hidden">E</button>
+
+  <!-- Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- CDN Libraries -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.2/dist/nipplejs.min.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
