@@ -119,6 +119,7 @@ export class NPCManager {
           const scale = 1.8 / size.y;
           model.scale.setScalar(scale);
           model.position.y = -box.min.y * scale; 
+          npc.modelBaseY = model.position.y;
         }
 
         // Enable shadows
@@ -136,10 +137,8 @@ export class NPCManager {
           npc.action.play();
         }
 
-        // Fix default rotation if character faces wrong way
-        // (usually GLTF characters face +Z, but engine assumes they face +Z too)
-        
         group.add(model);
+        npc.model = model;
       }, undefined, (err) => {
         console.error('Error loading NPC model:', err);
       });
@@ -233,6 +232,12 @@ export class NPCManager {
         // Idle arm sway
         if (npc.leftArm) npc.leftArm.rotation.z  = Math.sin(Date.now() * 0.001) * 0.05;
         if (npc.rightArm) npc.rightArm.rotation.z = -Math.sin(Date.now() * 0.001) * 0.05;
+
+        // Reset waddle for static custom models
+        if (npc.def.isCustomModel && npc.model && !npc.mixer) {
+          npc.model.position.y = THREE.MathUtils.lerp(npc.model.position.y, npc.modelBaseY, dt * 5);
+          npc.model.rotation.z = THREE.MathUtils.lerp(npc.model.rotation.z, 0, dt * 5);
+        }
       }
 
       if (npc.state === 'walk') {
@@ -259,6 +264,14 @@ export class NPCManager {
           if (npc.rightLeg) npc.rightLeg.rotation.x = -swing;
           if (npc.leftArm) npc.leftArm.rotation.x  = -swing * 0.5;
           if (npc.rightArm) npc.rightArm.rotation.x =  swing * 0.5;
+
+          // Procedural waddle for static custom models
+          if (npc.def.isCustomModel && npc.model && !npc.mixer) {
+            const bounce = Math.abs(Math.sin(npc.legPhase)) * 0.15;
+            const tilt = Math.cos(npc.legPhase) * 0.1;
+            npc.model.position.y = npc.modelBaseY + bounce;
+            npc.model.rotation.z = tilt;
+          }
         }
       }
 
