@@ -4,6 +4,7 @@
 // ====================================
 
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const NPC_DEFS = [
   {
@@ -16,7 +17,18 @@ const NPC_DEFS = [
     dialogLines: [
       'Selamat datang, pengembara! Desa ini sudah berdiri ratusan tahun.',
       'Tiga rumah di desa ini menyimpan cerita masing-masing. Jelajahi semuanya!',
-      'Hati-hati di malam hari, kabut bisa datang kapan saja...',
+    ]
+  },
+  {
+    name: 'Eishia Stilza',
+    emoji: '⚔️',
+    isCustomModel: true,
+    modelUrl: './src/assets/models/eishia_stilza_-_gachiakuta__3d_character_model.glb',
+    position: new THREE.Vector3(0, 0, 8),
+    zone: new THREE.Vector3(0, 0, 8),
+    dialogLines: [
+      'Hm? Apa yang kau lihat? Aku sedang mencari jalan pulang ke tempat asalku.',
+      'Desa ini sangat damai. Aku harap tidak ada bahaya di sini.',
     ]
   },
   {
@@ -82,63 +94,6 @@ export class NPCManager {
   _createNPC(def) {
     const group = new THREE.Group();
     group.position.copy(def.position);
-
-    // Body
-    const skinMat = new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.85 });
-    const hatMat  = new THREE.MeshStandardMaterial({ color: def.hatColor, roughness: 0.8 });
-    const darkMat = new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.9 });
-
-    // Head
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.44, 0.44), skinMat);
-    head.position.y = 1.78;
-    head.castShadow = true;
-    group.add(head);
-
-    // Hat
-    const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 0.3, 8), hatMat);
-    hat.position.y = 2.08;
-    hat.castShadow = true;
-    group.add(hat);
-
-    // Hat brim
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 12), hatMat);
-    brim.position.y = 1.96;
-    group.add(brim);
-
-    // Torso
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.65, 0.28), darkMat);
-    torso.position.y = 1.22;
-    torso.castShadow = true;
-    group.add(torso);
-
-    // Arms
-    const armMat = darkMat;
-    const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.55, 0.14), armMat);
-    leftArm.position.set(-0.32, 1.2, 0);
-    leftArm.castShadow = true;
-    group.add(leftArm);
-    const rightArm = leftArm.clone();
-    rightArm.position.set(0.32, 1.2, 0);
-    group.add(rightArm);
-
-    // Legs
-    const legMat = new THREE.MeshStandardMaterial({ color: 0x334455, roughness: 0.9 });
-    const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.65, 0.18), legMat);
-    leftLeg.position.set(-0.14, 0.545, 0);
-    leftLeg.castShadow = true;
-    group.add(leftLeg);
-    const rightLeg = leftLeg.clone();
-    rightLeg.position.set(0.14, 0.545, 0);
-    group.add(rightLeg);
-
-    // Eyes (tiny dark spheres)
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), eyeMat);
-    const eyeL = eye.clone(); eyeL.position.set(-0.1, 1.82, 0.23);
-    const eyeR = eye.clone(); eyeR.position.set(0.1, 1.82, 0.23);
-    group.add(eyeL, eyeR);
-
-    // Floating name tag
     group.userData.isMesh = false; // Don't raycast against group
 
     const npc = {
@@ -148,12 +103,106 @@ export class NPCManager {
       idleTimer: 2 + Math.random() * 3,
       walkTarget: def.position.clone(),
       dialogCooldown: 0,
-      leftLeg, rightLeg, leftArm, rightArm,
       legPhase: Math.random() * Math.PI * 2,
     };
 
+    // If custom model provided, load via GLTF
+    if (def.isCustomModel && def.modelUrl) {
+      const loader = new GLTFLoader();
+      loader.load(def.modelUrl, (gltf) => {
+        const model = gltf.scene;
+        
+        // Auto scale to ~1.8 units tall
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        if (size.y > 0.001) {
+          const scale = 1.8 / size.y;
+          model.scale.setScalar(scale);
+          model.position.y = -box.min.y * scale; 
+        }
+
+        // Enable shadows
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+        
+        // Play first animation if present
+        if (gltf.animations && gltf.animations.length > 0) {
+          npc.mixer = new THREE.AnimationMixer(model);
+          npc.action = npc.mixer.clipAction(gltf.animations[0]);
+          npc.action.play();
+        }
+
+        // Fix default rotation if character faces wrong way
+        // (usually GLTF characters face +Z, but engine assumes they face +Z too)
+        
+        group.add(model);
+      }, undefined, (err) => {
+        console.error('Error loading NPC model:', err);
+      });
+      
+      return npc;
+    }
+
+    // Default Blocky Body
+    const skinMat = new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.85 });
+    const hatMat  = new THREE.MeshStandardMaterial({ color: def.hatColor, roughness: 0.8 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.9 });
+
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.44, 0.44), skinMat);
+    head.position.y = 1.78;
+    head.castShadow = true;
+    group.add(head);
+
+    const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 0.3, 8), hatMat);
+    hat.position.y = 2.08;
+    hat.castShadow = true;
+    group.add(hat);
+
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 12), hatMat);
+    brim.position.y = 1.96;
+    group.add(brim);
+
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.65, 0.28), darkMat);
+    torso.position.y = 1.22;
+    torso.castShadow = true;
+    group.add(torso);
+
+    const armMat = darkMat;
+    const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.55, 0.14), armMat);
+    leftArm.position.set(-0.32, 1.2, 0);
+    leftArm.castShadow = true;
+    group.add(leftArm);
+    const rightArm = leftArm.clone();
+    rightArm.position.set(0.32, 1.2, 0);
+    group.add(rightArm);
+
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x334455, roughness: 0.9 });
+    const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.65, 0.18), legMat);
+    leftLeg.position.set(-0.14, 0.545, 0);
+    leftLeg.castShadow = true;
+    group.add(leftLeg);
+    const rightLeg = leftLeg.clone();
+    rightLeg.position.set(0.14, 0.545, 0);
+    group.add(rightLeg);
+
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), eyeMat);
+    const eyeL = eye.clone(); eyeL.position.set(-0.1, 1.82, 0.23);
+    const eyeR = eye.clone(); eyeR.position.set(0.1, 1.82, 0.23);
+    group.add(eyeL, eyeR);
+
+    npc.leftLeg = leftLeg;
+    npc.rightLeg = rightLeg;
+    npc.leftArm = leftArm;
+    npc.rightArm = rightArm;
+
     return npc;
   }
+
 
   setScene(scene) {
     this._scene = scene;
@@ -162,6 +211,11 @@ export class NPCManager {
   update(dt, playerPos) {
     for (const npc of this.npcs) {
       npc.dialogCooldown = Math.max(0, npc.dialogCooldown - dt);
+
+      // Update custom animations if present
+      if (npc.mixer) {
+        npc.mixer.update(dt);
+      }
 
       if (npc.state === 'idle') {
         npc.idleTimer -= dt;
@@ -177,8 +231,8 @@ export class NPCManager {
           npc.state = 'walk';
         }
         // Idle arm sway
-        npc.leftArm.rotation.z  = Math.sin(Date.now() * 0.001) * 0.05;
-        npc.rightArm.rotation.z = -Math.sin(Date.now() * 0.001) * 0.05;
+        if (npc.leftArm) npc.leftArm.rotation.z  = Math.sin(Date.now() * 0.001) * 0.05;
+        if (npc.rightArm) npc.rightArm.rotation.z = -Math.sin(Date.now() * 0.001) * 0.05;
       }
 
       if (npc.state === 'walk') {
@@ -201,10 +255,10 @@ export class NPCManager {
           // Leg/arm swing
           npc.legPhase += dt * 6;
           const swing = Math.sin(npc.legPhase) * 0.6;
-          npc.leftLeg.rotation.x  =  swing;
-          npc.rightLeg.rotation.x = -swing;
-          npc.leftArm.rotation.x  = -swing * 0.5;
-          npc.rightArm.rotation.x =  swing * 0.5;
+          if (npc.leftLeg) npc.leftLeg.rotation.x  =  swing;
+          if (npc.rightLeg) npc.rightLeg.rotation.x = -swing;
+          if (npc.leftArm) npc.leftArm.rotation.x  = -swing * 0.5;
+          if (npc.rightArm) npc.rightArm.rotation.x =  swing * 0.5;
         }
       }
 
