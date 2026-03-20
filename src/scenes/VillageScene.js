@@ -82,11 +82,14 @@ export class VillageScene {
     // Slightly vary vertices for natural feel
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-      if (Math.abs(pos.getX(i)) > 5 || Math.abs(pos.getZ(i)) > 5) {
-        pos.setY(i, (Math.random() - 0.5) * 0.3);
+      // In PlaneGeometry (XY plane), local Y becomes world -Z after rotation.
+      // We modify local Z to create world Y (height) variations.
+      if (Math.abs(pos.getX(i)) > 5 || Math.abs(pos.getY(i)) > 5) {
+        pos.setZ(i, (Math.random() - 0.5) * 0.3);
       }
     }
     geo.computeVertexNormals();
+
 
     const mat = new THREE.MeshStandardMaterial({
       color: 0x4a7c3f,
