@@ -192,9 +192,11 @@ export class NPCManager {
         } else {
           dir.normalize();
           npc.group.position.addScaledVector(dir, WALK_SPEED * dt);
-          // Face direction
+          // Smooth face direction (avoid snap rotation)
           const angle = Math.atan2(dir.x, dir.z);
-          npc.group.rotation.y = angle;
+          let walkDiff = angle - npc.group.rotation.y;
+          walkDiff = Math.atan2(Math.sin(walkDiff), Math.cos(walkDiff));
+          npc.group.rotation.y += walkDiff * 0.15;
 
           // Leg/arm swing
           npc.legPhase += dt * 6;
@@ -213,9 +215,13 @@ export class NPCManager {
         toPlayer.y = 0;
         if (toPlayer.length() > 0.1) {
           const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);
-          npc.group.rotation.y += (targetAngle - npc.group.rotation.y) * 0.06;
+          // Normalize to shortest path [-π, π] to prevent spinning
+          let diff = targetAngle - npc.group.rotation.y;
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          npc.group.rotation.y += diff * 0.08;
         }
         npc.state = 'idle';
+
       }
 
       // Keep at ground level

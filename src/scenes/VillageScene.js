@@ -336,44 +336,50 @@ export class VillageScene {
   }
 
   _buildInteractiveDoor(group, position, rotY, houseId) {
+    const DOOR_W = 1.0;
+    const DOOR_H = 2.2;
+
+    // Pivot at hinge = left edge of door opening
     const doorPivot = new THREE.Group();
-    doorPivot.position.copy(position);
-    doorPivot.position.x -= 0.5; // pivot at hinge
+    doorPivot.position.set(position.x - DOOR_W / 2, position.y, position.z);
     doorPivot.rotation.y = rotY;
     group.add(doorPivot);
 
     const doorMat = new THREE.MeshStandardMaterial({ color: 0x6B3A2A, roughness: 0.7 });
-    const doorGeo = new THREE.BoxGeometry(1.0, 2.2, 0.1);
-    const doorMesh = new THREE.Mesh(doorGeo, doorMat);
-    doorMesh.position.set(0.5, 1.1, 0);
+    const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(DOOR_W, DOOR_H, 0.1), doorMat);
+    // Door center in pivot space: right half (so door spans 0 → DOOR_W from pivot)
+    doorMesh.position.set(DOOR_W / 2, DOOR_H / 2, 0);
     doorMesh.castShadow = true;
     doorMesh.userData.isDoor = true;
     doorMesh.userData.houseId = houseId;
     doorMesh.userData.pivot = doorPivot;
     doorPivot.add(doorMesh);
 
-    // Door knob
+    // Door knob — in doorMesh local space (size 1×2.2×0.1, center at 0,0,0)
     const knobMat = new THREE.MeshStandardMaterial({ color: 0xddaa44, metalness: 0.8, roughness: 0.2 });
     const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), knobMat);
-    knob.position.set(0.85, 1.1, 0.08);
+    knob.position.set(0.42, 0, 0.06); // near right latch edge, front face
     doorMesh.add(knob);
 
-    // Door frame
+    // Symmetric door frame
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x4a2010, roughness: 0.9 });
-    const topFrame = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.12), frameMat);
-    topFrame.position.set(position.x, position.y + 2.25, position.z);
+    // Top frame
+    const topFrame = new THREE.Mesh(new THREE.BoxGeometry(DOOR_W + 0.26, 0.14, 0.16), frameMat);
+    topFrame.position.set(position.x, position.y + DOOR_H + 0.07, position.z);
     group.add(topFrame);
-    const leftF = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.4, 0.12), frameMat);
-    leftF.position.set(position.x - 0.05, position.y + 1.2, position.z);
+    // Left post (at left edge of door)
+    const leftF = new THREE.Mesh(new THREE.BoxGeometry(0.13, DOOR_H + 0.14, 0.16), frameMat);
+    leftF.position.set(position.x - DOOR_W / 2 - 0.065, position.y + DOOR_H / 2, position.z);
     group.add(leftF);
+    // Right post (at right edge of door)
     const rightF = leftF.clone();
-    rightF.position.set(position.x + 1.05, position.y + 1.2, position.z);
+    rightF.position.set(position.x + DOOR_W / 2 + 0.065, position.y + DOOR_H / 2, position.z);
     group.add(rightF);
 
-    // Steps
+    // Step — centered below door
     const stepMat = new THREE.MeshStandardMaterial({ color: 0xaaa090, roughness: 1 });
-    const step = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.5), stepMat);
-    step.position.set(position.x + 0.5, 0.06, position.z + 0.3);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(DOOR_W + 0.6, 0.12, 0.5), stepMat);
+    step.position.set(position.x, 0.06, position.z + 0.28);
     group.add(step);
 
     return { doorMesh, doorPivot, houseId, isOpen: false };
@@ -458,26 +464,28 @@ export class VillageScene {
     const postMat = new THREE.MeshStandardMaterial({ color: 0xC4A35A, roughness: 0.95 });
     const railMat = new THREE.MeshStandardMaterial({ color: 0xD4B36A, roughness: 0.95 });
 
-    const fenceSegment = (x, z, rotY) => {
+    // Each segment: post + 2 rails extending FORWARD in +Z direction
+    const fenceSegment = (x, z) => {
       const g = new THREE.Group();
-      const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.0, 0.1), postMat);
+      // Post
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.0, 0.12), postMat);
       post.position.y = 0.5;
       g.add(post);
-      const rail1 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.08, 0.05), railMat);
-      rail1.position.set(0.5, 0.8, 0);
+      // Top rail — runs along Z (length 2 = matches segment spacing)
+      const rail1 = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 2.0), railMat);
+      rail1.position.set(0, 0.78, 1.0);
       g.add(rail1);
+      // Bottom rail
       const rail2 = rail1.clone();
-      rail2.position.y = 0.4;
+      rail2.position.set(0, 0.42, 1.0);
       g.add(rail2);
       g.position.set(x, 0, z);
-      g.rotation.y = rotY;
       scene.add(g);
     };
 
-    // Left side fencing
-    for (let z = -20; z <= 15; z += 1) fenceSegment(-8, z, 0);
-    // Right side fencing
-    for (let z = -20; z <= 15; z += 1) fenceSegment(8, z, 0);
+    // Fences every 2 units along Z
+    for (let z = -20; z <= 14; z += 2) fenceSegment(-8, z);
+    for (let z = -20; z <= 14; z += 2) fenceSegment(8, z);
   }
 
   _buildRocks(scene) {

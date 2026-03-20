@@ -112,9 +112,10 @@ export class InteriorScene {
 // ========== Room Helper ==========
 function makeRoom(scene, disposables, w, h, d, wallColor, floorColor) {
   const floorMat = new THREE.MeshStandardMaterial({ color: floorColor, roughness: 0.9 });
-  const wallMat  = new THREE.MeshStandardMaterial({ color: wallColor,  roughness: 0.85 });
+  const wallMat  = new THREE.MeshStandardMaterial({ color: wallColor,  roughness: 0.85, side: THREE.FrontSide });
   const ceilMat  = new THREE.MeshStandardMaterial({ color: 0xf5ead0, roughness: 0.9 });
 
+  // Floor
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
@@ -122,39 +123,48 @@ function makeRoom(scene, disposables, w, h, d, wallColor, floorColor) {
   scene.add(floor);
   disposables.push(floor);
 
+  // Ceiling
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), ceilMat);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.y = h;
   scene.add(ceil);
   disposables.push(ceil);
 
-  const wallBack  = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
-  wallBack.rotation.y = Math.PI;
-  wallBack.position.set(0, h / 2, -d / 2);
+  const T = 0.3; // wall thickness for collision
+
+  // Back wall (at -d/2)
+  const wallBack = new THREE.Mesh(new THREE.BoxGeometry(w + T * 2, h, T), wallMat);
+  wallBack.position.set(0, h / 2, -d / 2 - T / 2);
   wallBack.userData.isWall = true;
+  wallBack.receiveShadow = true;
   scene.add(wallBack);
   disposables.push(wallBack);
 
-  const wallFront = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
-  wallFront.position.set(0, h / 2, d / 2);
+  // Front wall (at +d/2) - has door gap but use solid for collision
+  const wallFront = new THREE.Mesh(new THREE.BoxGeometry(w + T * 2, h, T), wallMat);
+  wallFront.position.set(0, h / 2, d / 2 + T / 2);
   wallFront.userData.isWall = true;
+  wallFront.receiveShadow = true;
   scene.add(wallFront);
   disposables.push(wallFront);
 
-  const wallLeft  = new THREE.Mesh(new THREE.PlaneGeometry(d, h), wallMat);
-  wallLeft.rotation.y = Math.PI / 2;
-  wallLeft.position.set(-w / 2, h / 2, 0);
+  // Left wall (at -w/2)
+  const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(T, h, d + T * 2), wallMat);
+  wallLeft.position.set(-w / 2 - T / 2, h / 2, 0);
   wallLeft.userData.isWall = true;
+  wallLeft.receiveShadow = true;
   scene.add(wallLeft);
   disposables.push(wallLeft);
 
-  const wallRight = new THREE.Mesh(new THREE.PlaneGeometry(d, h), wallMat);
-  wallRight.rotation.y = -Math.PI / 2;
-  wallRight.position.set(w / 2, h / 2, 0);
+  // Right wall (at +w/2)
+  const wallRight = new THREE.Mesh(new THREE.BoxGeometry(T, h, d + T * 2), wallMat);
+  wallRight.position.set(w / 2 + T / 2, h / 2, 0);
   wallRight.userData.isWall = true;
+  wallRight.receiveShadow = true;
   scene.add(wallRight);
   disposables.push(wallRight);
 }
+
 
 function addMesh(scene, disposables, geo, mat, px, py, pz, ry = 0, castShadow = true) {
   const mesh = new THREE.Mesh(geo, mat);
