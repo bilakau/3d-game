@@ -7,17 +7,17 @@ import * as THREE from 'three';
 
 const INTERIORS = {
   1: {
-    name: '🏡 Cozy Cottage – Living Room',
+    name: '🏡 Cozy Cottage - Living Room',
     spawn: new THREE.Vector3(0, 1.7, 3),
     build: buildLivingRoom,
   },
   2: {
-    name: '🏠 Modern Chalet – Kitchen',
+    name: '🏠 Modern Chalet - Kitchen',
     spawn: new THREE.Vector3(0, 1.7, 3),
     build: buildKitchen,
   },
   3: {
-    name: '🏪 Merchant's Workshop',
+    name: "🏪 Merchant's Workshop",
     spawn: new THREE.Vector3(0, 1.7, 4),
     build: buildWorkshop,
   },

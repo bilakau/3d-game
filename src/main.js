@@ -185,5 +185,11 @@ function isMobile() {
 
 boot().catch(err => {
   console.error('Boot failed:', err);
-  document.getElementById('loading-text').textContent = 'Error: ' + err.message;
+  const loadingText = document.getElementById('loading-text');
+  const loadingBar  = document.getElementById('loading-bar');
+  if (loadingText) {
+    loadingText.style.color = '#ff4444';
+    loadingText.textContent = '⚠ Error: ' + err.message;
+  }
+  if (loadingBar) loadingBar.style.background = '#ff4444';
 });
